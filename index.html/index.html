@@ -1,0 +1,273 @@
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TruthLens — Fake News & Media Checker</title>
+<style>
+  :root {
+    --bg: #08111f; --panel: rgba(17, 29, 49, .82); --line: rgba(148, 163, 184, .17);
+    --text: #edf4ff; --muted: #9eacc3; --blue: #6ea8fe; --cyan: #5eead4;
+    --purple: #a78bfa; --green: #4ade80; --amber: #fbbf24; --red: #fb7185;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(900px 500px at 10% -10%, rgba(59,130,246,.23), transparent 65%),
+      radial-gradient(700px 420px at 100% 0%, rgba(139,92,246,.19), transparent 65%),
+      var(--bg);
+  }
+  button, input, textarea { font: inherit; }
+  button { cursor: pointer; }
+  .shell { max-width: 1180px; margin: auto; padding: 24px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:34px; }
+  .brand { display:flex; align-items:center; gap:12px; font-weight:800; font-size:21px; letter-spacing:-.5px; }
+  .logo { width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#60a5fa,#8b5cf6);box-shadow:0 8px 28px #3b82f64a; }
+  .logo svg { width:24px; }
+  .pill { border:1px solid var(--line); background:#ffffff08; padding:9px 13px; border-radius:999px; color:#cbd5e1; font-size:12px; display:flex;align-items:center;gap:8px; }
+  .dot { width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 10px #4ade80; }
+  .hero { display:grid;grid-template-columns:1.1fr .9fr;gap:38px;align-items:center;margin:26px 0 34px; }
+  .eyebrow { color:var(--cyan);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:11px; }
+  h1 { font-size:clamp(38px,5.5vw,66px);line-height:1.04;letter-spacing:-2.6px;margin:14px 0 18px; }
+  h1 span { background:linear-gradient(90deg,#60a5fa,#a78bfa,#5eead4);background-clip:text;-webkit-background-clip:text;color:transparent; }
+  .hero p { color:var(--muted);line-height:1.75;max-width:560px;font-size:15px; }
+  .hero-visual { min-height:260px;position:relative;display:grid;place-items:center; }
+  .orb { width:230px;height:230px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 25%,#7dd3fc,#3b82f6 40%,#312e81 75%);box-shadow:0 0 90px #3b82f64a,inset -15px -20px 45px #11182788;position:relative; }
+  .orb:before,.orb:after { content:"";position:absolute;border:1px solid #93c5fd50;border-radius:50%;inset:-22px;transform:rotateX(62deg) rotateZ(-25deg); }
+  .orb:after { inset:-42px;transform:rotateX(62deg) rotateZ(35deg); }
+  .orb svg { width:86px;height:86px;filter:drop-shadow(0 6px 20px #08111f80); }
+  .float-card { position:absolute;z-index:2;border:1px solid #ffffff20;background:#101c30dd;backdrop-filter:blur(12px);padding:12px 15px;border-radius:14px;box-shadow:0 14px 35px #0004;font-size:12px; }
+  .float-card strong { display:block;font-size:13px;margin-bottom:4px; }
+  .fc1 { top:25px;left:0; }.fc2 { bottom:28px;right:0; }
+  .workspace { display:grid;grid-template-columns:1.12fr .88fr;gap:18px;align-items:start; }
+  .card { border:1px solid var(--line);background:var(--panel);border-radius:22px;padding:23px;box-shadow:0 18px 50px #0002;backdrop-filter:blur(12px); }
+  .card-head { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px; }
+  h2 { font-size:18px;letter-spacing:-.4px;margin:0; }
+  .sub { color:var(--muted);font-size:12px;margin-top:6px; }
+  .tabs { display:flex;gap:6px;background:#070e1a;padding:5px;border-radius:12px;margin-bottom:18px; }
+  .tab { flex:1;border:0;background:transparent;color:var(--muted);padding:10px 8px;border-radius:9px;font-size:12px;font-weight:700; }
+  .tab.active { background:#243b5c;color:#eaf3ff;box-shadow:inset 0 0 0 1px #60a5fa35; }
+  label { display:block;font-size:12px;color:#cbd5e1;font-weight:700;margin:0 0 9px; }
+  textarea,input[type="url"] { width:100%;background:#080f1c;border:1px solid #26354b;border-radius:12px;padding:14px;color:var(--text);outline:none;transition:.2s; }
+  textarea { resize:vertical;min-height:135px;line-height:1.6; }
+  textarea:focus,input[type="url"]:focus { border-color:var(--blue);box-shadow:0 0 0 3px #60a5fa18; }
+  input[type="file"] { display:none; }
+  .upload { border:1px dashed #42516a;border-radius:12px;padding:17px;text-align:center;background:#0b1423;color:var(--muted);font-size:12px; }
+  .upload strong { display:block;color:#dbeafe;font-size:13px;margin:6px 0; }
+  .upload-icon { font-size:25px; }
+  .row { display:flex;gap:12px;align-items:center;flex-wrap:wrap; }
+  .primary { border:0;border-radius:12px;padding:13px 17px;background:linear-gradient(100deg,#3b82f6,#7c3aed);color:white;font-weight:800;box-shadow:0 8px 25px #3b82f633;transition:transform .2s,opacity .2s; }
+  .primary:hover { transform:translateY(-1px); }
+  .primary:disabled { opacity:.6;cursor:wait; }
+  .secondary { border:1px solid var(--line);border-radius:12px;padding:12px 15px;color:#dbeafe;background:#ffffff08;font-weight:700; }
+  .tiny { color:var(--muted);font-size:11px;line-height:1.5; }
+  .status { display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;margin-top:13px; }
+  .status .dot { background:var(--amber);box-shadow:none; }
+  .result-empty { min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:18px; }
+  .result-empty .icon { width:72px;height:72px;border:1px solid #334155;border-radius:22px;display:grid;place-items:center;font-size:30px;background:#ffffff05;margin-bottom:18px; }
+  .result { display:none; }
+  .verdict { display:flex;align-items:center;gap:13px;padding:16px;border-radius:15px;background:#0b1726;border:1px solid var(--line);margin-bottom:18px; }
+  .verdict-symbol { width:45px;height:45px;border-radius:14px;display:grid;place-items:center;font-size:23px;background:#fbbf2418; }
+  .verdict h3 { margin:0 0 5px;font-size:16px; }.verdict p { margin:0;color:var(--muted);font-size:12px; }
+  .score-row { display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px;font-size:12px;color:#cbd5e1; }
+  .bar { height:8px;border-radius:99px;background:#243044;overflow:hidden; }.bar span { display:block;height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#5eead4);border-radius:99px;transition:width .8s; }
+  .section-label { font-size:11px;color:#93c5fd;letter-spacing:1.3px;font-weight:800;text-transform:uppercase;margin:21px 0 10px; }
+  .evidence { display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.5; }.evidence:last-child {border:0}
+  .evidence .check { color:var(--cyan);font-size:16px; }
+  .feature-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px; }
+  .feature { padding:18px;border:1px solid var(--line);border-radius:17px;background:#ffffff04; }
+  .feature .emoji { font-size:22px;margin-bottom:13px; }.feature h3 {font-size:13px;margin:0 0 7px}.feature p {font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+  footer { text-align:center;color:#6f819a;font-size:11px;padding:30px 0 10px; }
+  .toast { display:none;margin-top:12px;padding:10px 12px;background:#3b82f61a;border:1px solid #60a5fa44;border-radius:10px;color:#bfdbfe;font-size:12px; }
+  @media(max-width:850px) { .hero,.workspace {grid-template-columns:1fr}.hero-visual{min-height:240px}.hero{gap:8px}.feature-grid{grid-template-columns:1fr}.fc1{left:3%}.fc2{right:3%} }
+  @media(max-width:520px) { .shell{padding:16px}.card{padding:17px}header{align-items:flex-start}.pill{font-size:10px}h1{letter-spacing:-1.5px}.hero-visual{min-height:220px}.orb{width:165px;height:165px}.orb svg{width:65px}.float-card{font-size:10px;padding:10px}.tabs{gap:3px}.tab{font-size:11px;padding:9px 4px} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path d="M12 3 19 6v5c0 5-3.4 8.3-7 10-3.6-1.7-7-5-7-10V6l7-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+      </div>
+      TruthLens
+    </div>
+    <div class="pill"><span class="dot"></span> Verification workspace <span style="color:#64748b">•</span> Demo UI</div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">AI Automation · InnoHack 2.0</div>
+      <h1>Pause the scroll.<br><span>Check the truth.</span></h1>
+      <p>Analyze a claim, photo, or video in one place. Review a clear verdict, confidence indicator, and evidence sources before deciding what to trust.</p>
+      <div class="row" style="margin-top:22px">
+        <div class="pill">🔎 Source comparison</div><div class="pill">🧠 AI-assisted review</div>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="float-card fc1"><strong>Evidence first</strong><span style="color:#9eacc3">Sources · Context · Signals</span></div>
+      <div class="orb">
+        <svg viewBox="0 0 100 100" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="42" cy="42" r="25"/><path d="m60 60 20 20"/><path d="m30 42 8 8 17-19"/></svg>
+      </div>
+      <div class="float-card fc2"><strong style="color:#5eead4">✓ Context matters</strong><span style="color:#9eacc3">Verify before you share</span></div>
+    </div>
+  </section>
+
+  <section class="workspace">
+    <div class="card">
+      <div class="card-head"><div><h2>Start a verification</h2><div class="sub">Choose what you want to check.</div></div><span style="font-size:21px">✦</span></div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-type="claim" role="tab" aria-selected="true">✍️ Claim / Text</button>
+        <button class="tab" data-type="image" role="tab" aria-selected="false">🖼️ Image</button>
+        <button class="tab" data-type="video" role="tab" aria-selected="false">▶ Video</button>
+      </div>
+      <div id="claimPanel">
+        <label for="claimText">CLAIM OR NEWS TEXT</label>
+        <textarea id="claimText" placeholder="Paste a headline, social post, or claim here…"></textarea>
+        <div class="tiny" style="margin-top:8px">Tip: include the exact wording and any date or location mentioned.</div>
+      </div>
+      <div id="mediaPanel" style="display:none">
+        <label for="mediaFile">UPLOAD MEDIA</label>
+        <label class="upload" for="mediaFile" style="cursor:pointer;display:block">
+          <div class="upload-icon">⬆</div><strong id="uploadTitle">Drop an image or choose a file</strong>
+          <span id="uploadText">PNG, JPG, WEBP or supported video file</span>
+        </label>
+        <input id="mediaFile" type="file" accept="image/*,video/*" />
+        <div id="filePreview" class="tiny" style="margin-top:10px">Your file stays in this browser demo; no upload server is connected.</div>
+        <div style="margin-top:15px"><label for="contextUrl">SOURCE LINK (OPTIONAL)</label><input id="contextUrl" type="url" placeholder="https://example.com/article" /></div>
+      </div>
+      <div class="row" style="margin-top:19px">
+        <button class="primary" id="analyzeBtn">✦ Analyze content</button>
+        <button class="secondary" id="clearBtn">Clear</button>
+      </div>
+      <div class="status"><span class="dot"></span><span>Demo mode: results are illustrative, not a real fact-check.</span></div>
+      <div id="toast" class="toast"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Verification report</h2><div class="sub">Verdict, confidence, and supporting signals.</div></div><span class="pill">REPORT</span></div>
+      <div id="emptyState" class="result-empty"><div class="icon">🛡️</div><h3 style="color:#e2e8f0;margin:0 0 8px;font-size:16px">Your report will appear here</h3><p style="font-size:12px;line-height:1.7;max-width:260px;margin:0">Submit a claim or select a media file to preview the verification experience.</p></div>
+      <div id="result" class="result" aria-live="polite">
+        <div class="verdict"><div class="verdict-symbol" id="verdictIcon">◈</div><div><h3 id="verdictTitle">Needs verification</h3><p id="verdictDesc">Demo assessment only</p></div></div>
+        <div class="score-row"><span>Illustrative confidence</span><strong id="scoreText">—</strong></div>
+        <div class="bar"><span id="scoreBar"></span></div>
+        <div class="section-label">Evidence & signals</div>
+        <div id="evidenceList"></div>
+        <div class="tiny" style="margin-top:15px">A real verdict requires a connected verification backend, trusted-source retrieval, and media forensics. Confidence here is randomly illustrative and must not be treated as fact.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature-grid">
+    <div class="feature"><div class="emoji">🌐</div><h3>Trusted-source comparison</h3><p>Designed to compare a claim with reputable reporting and primary sources.</p></div>
+    <div class="feature"><div class="emoji">🧬</div><h3>Media authenticity signals</h3><p>Plan for image metadata, reverse-search results, and video frame analysis.</p></div>
+    <div class="feature"><div class="emoji">🧾</div><h3>Evidence you can inspect</h3><p>Show links, dates, source context, and the reasoning behind a final assessment.</p></div>
+  </section>
+  <footer>TruthLens · InnoHack 2.0 prototype · Verify the evidence, not just the headline.</footer>
+</div>
+<script>
+  const tabs = [...document.querySelectorAll('.tab')];
+  const claimPanel = document.getElementById('claimPanel');
+  const mediaPanel = document.getElementById('mediaPanel');
+  const mediaFile = document.getElementById('mediaFile');
+  const uploadTitle = document.getElementById('uploadTitle');
+  const uploadText = document.getElementById('uploadText');
+  const filePreview = document.getElementById('filePreview');
+  const toast = document.getElementById('toast');
+  let activeType = 'claim';
+
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => { t.classList.toggle('active', t === tab); t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+    activeType = tab.dataset.type;
+    claimPanel.style.display = activeType === 'claim' ? 'block' : 'none';
+    mediaPanel.style.display = activeType === 'claim' ? 'none' : 'block';
+    mediaFile.accept = activeType === 'image' ? 'image/*' : activeType === 'video' ? 'video/*' : 'image/*,video/*';
+    uploadTitle.textContent = activeType === 'image' ? 'Choose an image to inspect' : 'Choose a video to inspect';
+    uploadText.textContent = activeType === 'image' ? 'PNG, JPG, WEBP' : 'MP4, MOV, WEBM (browser support varies)';
+    mediaFile.value = '';
+    filePreview.textContent = 'Your file stays in this browser demo; no upload server is connected.';
+  }));
+
+  mediaFile.addEventListener('change', () => {
+    const file = mediaFile.files[0];
+    if (!file) return;
+    const expected = activeType === 'image' ? file.type.startsWith('image/') : file.type.startsWith('video/');
+    if (!expected) {
+      filePreview.textContent = 'Please choose a valid ' + activeType + ' file.';
+      mediaFile.value = '';
+      return;
+    }
+    filePreview.textContent = `Selected: ${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+  });
+
+  document.getElementById('analyzeBtn').addEventListener('click', () => {
+    const claim = document.getElementById('claimText').value.trim();
+    const file = mediaFile.files[0];
+    if (activeType === 'claim' && !claim) {
+      showToast('Please enter a claim or news text first.');
+      document.getElementById('claimText').focus();
+      return;
+    }
+    if (activeType !== 'claim' && !file) {
+      showToast('Please select a ' + activeType + ' file first.');
+      return;
+    }
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true; btn.textContent = '◌ Preparing demo report…';
+    toast.style.display = 'none';
+    setTimeout(() => {
+      const outcomes = [
+        {title:'Needs more evidence', icon:'◈', color:'#fbbf24', desc:'The available demo signals are inconclusive.', score:54},
+        {title:'Context required', icon:'ⓘ', color:'#60a5fa', desc:'More reliable sources are needed to assess this.', score:68},
+        {title:'Review recommended', icon:'⚑', color:'#a78bfa', desc:'This item should be checked against trusted sources.', score:76}
+      ];
+      const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      const icon = document.getElementById('verdictIcon');
+      icon.textContent = outcome.icon; icon.style.color = outcome.color;
+      document.getElementById('verdictTitle').textContent = outcome.title;
+      document.getElementById('verdictDesc').textContent = outcome.desc;
+      document.getElementById('scoreText').textContent = outcome.score + '% (demo)';
+      document.getElementById('scoreBar').style.width = outcome.score + '%';
+      const signals = activeType === 'claim'
+        ? ['Claim captured for review: “' + (claim.length > 95 ? claim.slice(0,95) + '…' : claim) + '”', 'Trusted-source comparison is not connected in this prototype.', 'Check publication date, original source, and independent reporting.']
+        : ['File selected: ' + file.name, 'No forensic or reverse-search service is connected.', 'Inspect original upload, metadata, and independent context.'];
+      const list = document.getElementById('evidenceList');
+      list.innerHTML = '';
+      signals.forEach((signal, i) => {
+        const item = document.createElement('div'); item.className = 'evidence';
+        const check = document.createElement('span'); check.className = 'check'; check.textContent = ['↗','◉','✓'][i];
+        const text = document.createElement('span'); text.textContent = signal;
+        item.append(check, text); list.appendChild(item);
+      });
+      btn.disabled = false; btn.textContent = '✦ Analyze content';
+    }, 750);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('claimText').value = '';
+    document.getElementById('contextUrl').value = '';
+    mediaFile.value = '';
+    filePreview.textContent = 'Your file stays in this browser demo; no upload server is connected.';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'flex';
+    document.getElementById('scoreBar').style.width = '0';
+    toast.style.display = 'none';
+  });
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.style.display = 'block';
+  }
+</script>
+</body>
+</html>
+'''
+path = Path("/mnt/data/truthlens_frontend.html")
+path.write_text(html, encoding="utf-8")
+print(f"Created: {path}\nSize: {path.stat().st_size:,} bytes")
